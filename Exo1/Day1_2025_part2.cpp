@@ -10,8 +10,8 @@
 
 int main() {
     
-    std::ifstream infile("inputEASY");
-    //std::ifstream infile("input");
+    //std::ifstream infile("inputEASY");
+    std::ifstream infile("input");
     if (!infile.is_open()) {
         std::cerr << "Cannot open file\n";
         return 1;
@@ -41,21 +41,30 @@ int main() {
 
 
         if (op == 'L') {
-            newValue -= num;
 
-            int passes = 0;
-            if (newValue < 0) {
-                passes = (-newValue + 99) / 100;  // ceil(-newValue / 100)
-                newValue += passes * 100;         // wrap back
-                zero_Count += passes;
+            if (value == 0) {
+                passes = num / 100;
+            } 
+            else if (num >= value) {
+                passes = (num - value) / 100 + 1;   // how many times we cross 0 → 99
+            } 
+            else {
+                passes = 0;
             }
+
+            int nv = (value - num) % 100;
+            if (nv < 0) nv += 100;    // normalize
+            newValue = nv;
+
         } 
         else if (op == 'R') {
-            newValue += num;
-            passes = newValue % 100;
-            newValue -= passes * 100;
-            zero_Count += passes;
+            long long tot = (long long)value + num;
+
+            passes = tot / 100;       // how many times we cross 99 → 0
+            newValue = tot % 100;     // final position
+
         }
+        zero_Count += passes;
 
 
         value = newValue;
@@ -76,5 +85,7 @@ int main() {
         std::cout << "\n";
 
     }
+    std::cout  << " time(s), Total count: " << "\033[33m" << zero_Count << "\033[0m";
+        
 
 }
