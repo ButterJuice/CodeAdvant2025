@@ -3,6 +3,7 @@
 #include <sstream>
 #include <vector>
 #include <string>
+#include <chrono> // <-- Add this
 
 bool isInvalidID(long long x) {
     std::string s = std::to_string(x);
@@ -42,6 +43,8 @@ bool isInvalidID(long long x) {
 #define RESET   "\033[0m"
 
 int main() {
+    auto start_time = std::chrono::high_resolution_clock::now(); // Start timer
+
     std::ifstream file("input");
     //std::ifstream file("inputEASY");
     if (!file) {
@@ -78,22 +81,24 @@ int main() {
 
     for (size_t i = 0; i < starts.size(); ++i) {
 
-        std::cout << YELLOW
-                  << "Checking range: " << starts[i]
-                  << "-" << ends[i] << RESET << "\n";
+       
 
         for (long long id = starts[i]; id <= ends[i]; ++id) {
 
             if (isInvalidID(id)) {
-                std::cout << RED << "INVALID: " << id << RESET << "\n";
+                //std::cout << RED << "INVALID: " << id << RESET << "\n";
                 total += id;
             } else {
-                std::cout << GREEN << "valid:   " << id << RESET << "\n";
+                //std::cout << GREEN << "valid:   " << id << RESET << "\n";
             }
         }
     }
 
     std::cout << "\nTotal invalid sum = " << total << "\n";
+
+    auto end_time = std::chrono::high_resolution_clock::now(); // End timer
+    std::chrono::duration<double> elapsed = end_time - start_time;
+    std::cout << "Execution time: " << elapsed.count() << " seconds\n";
 
     return 0;
 }
