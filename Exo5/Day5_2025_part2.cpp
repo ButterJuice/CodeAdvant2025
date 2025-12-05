@@ -2,6 +2,8 @@
 #include <fstream>
 #include <string>
 #include <vector>
+#include <cctype>
+#include <algorithm>
 
 
 #define RED     "\033[31m"
@@ -10,86 +12,146 @@
 #define BLUE    "\033[34m"
 #define RESET   "\033[0m"
 
-std::vector<std::string> readGrid(const std::string& filename) {
+struct Range {
+    long long start;
+    long long end;
+};
+
+bool isInRange(long long value, const Range& range) {
+    return value >= range.start && value <= range.end;
+}
+
+// Merge overlapping or adjacent ranges in-place
+void mergeRanges(std::vector<Range>& ranges) {
+    if (ranges.empty()) return;
+
+    // Sort ranges by start value
+    std::sort(ranges.begin(), ranges.end(), [](const Range& a, const Range& b) {
+        return a.start < b.start;
+    });
+
+    std::vector<Range> merged;
+    merged.push_back(ranges[0]);
+
+    for (size_t i = 1; i < ranges.size(); ++i) {
+        Range& last = merged.back();
+        // If current range overlaps or is adjacent to the last, merge them
+        if (ranges[i].start <= last.end + 1) {
+            last.end = std::max(last.end, ranges[i].end);
+        } else {
+            merged.push_back(ranges[i]);
+        }
+    }
+    ranges = std::move(merged);
+}
+
+void readEntries(const std::string& filename, std::vector<Range>& ranges, std::vector<long long>& numbers) {
     std::ifstream file(filename);
-    std::vector<std::string> grid;
+    if (!file) {
+        std::cerr << "Cannot open input\n";
+        return;
+    }
+
     std::string line;
+    bool readingRanges = true;
 
     while (std::getline(file, line)) {
-        if (!line.empty() && line.back() == '\r')
-            line.pop_back();
-        if (!line.empty())
-            grid.push_back(line);
-    }
-    return grid;
-}
+        if (!line.empty() && line.back() == '\r') line.pop_back();
 
+        if (line.empty()) {
+            readingRanges = false;
+            continue;
+        }
 
-int countAdjacent(const std::vector<std::string>& grid, int r, int c) {
-    int H = grid.size();
-    int W = grid[0].size();
-    int count = 0;
+        if (readingRanges) {
+            size_t dash = line.find('-');
+            if (dash == std::string::npos) {
+                std::cerr << "Invalid range line (missing '-'): \"" << line << "\"\n";
+                continue;
+            }
 
-    // all eight directions
-    int dr[8] = {-1, -1, -1, 0, 0, 1, 1, 1};
-    int dc[8] = {-1, 0, 1, -1, 1, -1, 0, 1};
+            // Extract the start and end of the range as strings
+            std::string a_str = line.substr(0, dash);
+            std::string b_str = line.substr(dash + 1);
 
-    for (int i = 0; i < 8; ++i) {
-        int nr = r + dr[i];
-        int nc = c + dc[i];
+            // Convert the extracted strings to long long integers
+            long long a = std::stoll(a_str);
+            long long b = std::stoll(b_str);
 
-        if (nr >= 0 && nr < H && nc >= 0 && nc < W) {
-            if (grid[nr][nc] == '@')
-                count++;
+            if (a_str.empty() || b_str.empty()) {
+                std::cerr << "Invalid range line (empty endpoints): \"" << line << "\"\n";
+                continue;
+            }
+
+            ranges.push_back({a, b});
+        } else {
+            try {
+                // Convert the line to a long long integer
+                long long v = std::stoll(line);
+                numbers.push_back(v);
+            } catch (const std::exception &e) {
+                std::cerr << "Invalid number line: \"" << line << "\"\n";
+                continue;
+            }
         }
     }
-    return count;
-}
-int removePaper(std::vector<std::string>& grid) {
-    int H = grid.size();
-    int W = grid[0].size();
-
-    int total_paper = 0;
-    int total_accessible = 0;
-    int total_non_accessible = 0;
-    for (int r = 0; r < H; ++r) {
-        for (int c = 0; c < W; ++c) {
-            if(grid[r][c] == '@'){
-                total_paper++;
-                int adj = countAdjacent(grid, r, c);
-                if(adj >= 4){
-                    total_non_accessible++;
-                    std::cout  << YELLOW << adj << ' ' << RESET;
-                }
-                else{
-                    std::cout << adj << ' ' ;
-                    grid[r][c] = '.'; // Remove paper
-                }
-            }else
-                std::cout <<". " ;
-        }
-        std::cout << "\n";
-    }
-    total_accessible = total_paper - total_non_accessible; 
-    std::cout << "Total accessible: " << total_accessible << "\n";
-    std::cout << "Total removed: " << total_non_accessible << "\n";
-    return total_accessible;
 }
 
 int main() {
-    //std::vector<std::string> grid = readGrid("inputEASY");
-    std::vector<std::string> grid = readGrid("input");
-    int prev_accessible = -1;
-    int curr_accessible = 0;
-    int total_removed = 0;
+    std::vector<Range> ranges;
+    std::vector<long long> numbers;
 
-    do {
-        prev_accessible = curr_accessible;
-        curr_accessible = removePaper(grid);
-        total_removed +=  curr_accessible;
-        std::cout << "----\n";
-    } while (curr_accessible != prev_accessible);
+    //readEntries("inputEASY", ranges, numbers);
+    readEntries("input", ranges, numbers);
 
-    std::cout << "Final accessible: " << curr_accessible << "\n";
-    std::cout << "Total removed paper roll: " << total_removed << "\n";
+    // Merge overlapping or adjacent ranges
+    mergeRanges(ranges);
+
+    // Debug output
+    std::cout << "Ranges:\n";
+    for (const auto &r : ranges) {
+        std::cout << r.start << "-" << r.end << "\n";
+    }
+
+    std::cout << "\nNumbers:\n";
+
+    int fresh_count = 0;
+    for (int i = 0; i < numbers.size(); i++) {
+        long long n = numbers[i];
+        std::cout << n ;
+        for (size_t j = 0; j < ranges.size(); j++)
+        { 
+            if(isInRange(n, ranges[j])) {
+                std::cout << "  In range" ;
+                fresh_count++;            
+            }
+        }
+        std::cout << "\n";
+        
+       
+    }
+    std::cout << "\nFresh count: " << fresh_count << "\n";
+
+
+    // std::cout << "\nAll fresh values:\n";
+    // int fresh_value_count = 0;
+    // for (const auto &r : ranges) {
+    //     for (long long v = r.start; v <= r.end; v++) {
+    //         std::cout << GREEN << v << "\n" << RESET;
+    //         fresh_value_count++;
+
+    //     }
+    // }
+
+    long long fresh_value_count = 0;
+    for (const auto &r : ranges)
+    {
+         fresh_value_count += r.end - r.start+1 ;
+    }
+    
+    std::cout << "\nTotal fresh value count: " << YELLOW<<fresh_value_count <<RESET<< "\n";
+
+
+    
+    return 0;
 }
