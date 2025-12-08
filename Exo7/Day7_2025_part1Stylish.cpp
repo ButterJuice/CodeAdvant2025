@@ -2,8 +2,6 @@
 #include <fstream>
 #include <vector>
 #include <string>
-#include <map>
-#include <tuple>
 
 struct Cell {
     int x;
@@ -44,43 +42,50 @@ void printGrid(const Grid& grid) {
     }
 }
 
-// Memoization cache: key is (x, y)
-std::map<std::pair<int, int>, long long> memo;
+//explore the number of paths possible from top to bottom
+ int exploreGrid(int counter, Grid& grid, int x, int y) {
 
-//Explore the number of paths possible from top to bottom
-long long exploreGrid(Grid& grid, int x, int y) {
-    if (x < 0 || x >= grid.width || y < 0 || y >= grid.height)
-        return 0;
-
-    if (y == grid.height - 1)
+    if(y == grid.height)
+    {
+        // std::cout << "Found path:\n";
+        // printGrid(grid);
+        // std::cout << "\n";
         return 1;
-
-    auto key = std::make_pair(x, y);
-    if (memo.count(key)) return memo[key];
-
-    long long result = 0;
-    if (grid.lines[y][x] == '^') {
-        result = exploreGrid(grid, x - 1, y + 1) + exploreGrid(grid, x + 1, y + 1);
-    } else {
-        result = exploreGrid(grid, x, y + 1);
+    }
+    if (x < 0 || x >= grid.width || y < 0 )
+    {
+        return 0;
     }
 
-    memo[key] = result;
-    return result;
-}
+
+    if(grid.lines[y][x] == '^')
+    {
+        return exploreGrid(counter, grid, x - 1, y + 1) + exploreGrid(counter, grid, x + 1, y + 1);
+    }else if (grid.lines[y][x] == '.')
+    {
+       grid.lines[y][x] = '|';
+    }
+    
+
+    return exploreGrid(counter, grid, x, y + 1);
+    
+
+ }
 
 
 int main() {
     //Grid grid = readGrid("inputMegaEASY");
     Grid grid = readGrid("input");
-    //  Grid grid = readGrid("inputEASY");
+    // Grid grid = readGrid("inputEASY");
 
     std::cout << "Initial grid:\n";
     printGrid(grid);
+    int total_splits = 0;
 
-    long long total_paths = exploreGrid(grid, grid.width / 2, 0);
+    int total_paths = exploreGrid(0, grid, grid.width / 2, 0);
 
 
+    std::cout << "\nTotal number of splits: " << total_splits << "\n";
     std::cout << "Total number of paths: " << total_paths << "\n";
     return 0;
 }
